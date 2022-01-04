@@ -1,13 +1,15 @@
 package greenroof;
 
+import java.util.TreeMap;
+
 public class MassBalance
 {
 	//HYDROLOGICAL PROCESSES FOR PERVIOUS subarea
 
 //	function [theta,DthetaDt,f,pe,red,F,Ft,Peffect,AWI,esc,irr_vol,Ptot_cum_event]= 
-		public void MassBalance_(int tstep, double[] P, double[] R, double[][] runon, double[] E_T, int[] general_inf, double[] outflow_data, 
-				double[] sub_data, double[] plant_data2, double[][] theta, double[][] DthetaDt, double[][] f, double[][] pe, double[][] red, double[][] F,
-				double[][] Ft, double[][] Peffect, double[][] AWI, double[][] esc, double irr_vol, double Ptot_cum_event)
+		public TreeMap MassBalance_(int tstep, double[] P, double[] R, double[] runon, double[] E_T, int[] general_inf, double[] outflow_data, 
+				double[] sub_data, double[] plant_data2, double[][] theta, double[][] DthetaDt, double[] f, double[][] pe, double[][] red, double[] F,
+				double[] Ft, double[] Peffect, double[] AWI, double[] esc, double irr_vol, double Ptot_cum_event)
 		{
 	//INPUT
 	//P                                      //Precipitation (mm)
@@ -32,7 +34,7 @@ public class MassBalance
 	                     
 	int nL=general_inf[Constants.FOUR];                       //Number of layers in the subarea
 
-	double vegcov=plant_data2[Constants.ONE]/100;          //Vegetation coverage
+	double vegcov=plant_data2[Constants.ONE]/100.;          //Vegetation coverage
 	double S=plant_data2[Constants.THREE];                   //Maximum water stored (mm)
 	double k=plant_data2[Constants.TWO];                   //Leaf area index
 
@@ -65,7 +67,7 @@ public class MassBalance
 //	//WP=layer(9,:);                          //Wilting point (m3/m3)
 //	double[] FC=layer(10,:);                         //Field capacity (m3/m3)
 	
-	double[] d=GreenRoofCommon.fillArray(nL, sub_data[Constants.ONE]*1000/nL);                      //Layer thickness (mm)
+	double[] d=GreenRoofCommon.fillArray(nL, sub_data[Constants.ONE]*1000./nL);                      //Layer thickness (mm)
 	double[] theta_i=GreenRoofCommon.fillArray(nL, sub_data[Constants.TWO]);                     //Initial soil water content  (m3/m3)
 	double[] theta_r=GreenRoofCommon.fillArray(nL, sub_data[Constants.THREE]);                     //Residual soil water content (m3/m3)
 	double[] theta_s=GreenRoofCommon.fillArray(nL, sub_data[Constants.FOUR]);                     //Saturated soil water content (m3/m3)
@@ -97,10 +99,10 @@ public class MassBalance
 	//irr_vol                                //Irrigation volume (m3)
 
 	//VARIABLES'S INITIATION
-	double[][] e=new double[P.length][1];                   //Variable assistant to calculate surface runoff (mm)
-	double[][] theta_p=new double[1][nL];                    //Variable assistant to calculate soil water content (m3/m3)
-	double[][] K_p=new double[nL][1];                        //Variable assistant to calculate unsaturated hydraulic conductivity (mm/h)
-	double[][] psi_p=new double[nL][1];                      //Variable assistant to calculate suction head at wetting front (mm)
+	double[] e=new double[P.length];                   //Variable assistant to calculate surface runoff (mm)
+	double[] theta_p=new double[nL];                    //Variable assistant to calculate soil water content (m3/m3)
+	double[] K_p=new double[nL];                        //Variable assistant to calculate unsaturated hydraulic conductivity (mm/h)
+	double[] psi_p=new double[nL];                      //Variable assistant to calculate suction head at wetting front (mm)
 
 	double[][] Aeq=new double[nL][2+2*nL];                   //Matix assistant to calculate mass balance
 
@@ -111,29 +113,36 @@ public class MassBalance
 	        Aeq[Constants.ONE][Constants.ONE]=dt/d[Constants.ONE];
 	        Aeq[Constants.ONE][Constants.TWO]=-dt/d[Constants.ONE];
 	        Aeq[Constants.ONE][Constants.THREE]=-dt/d[Constants.ONE];
-	        Aeq[Constants.ONE][Constants.THREE+nL]=-1;    
+	        Aeq[Constants.ONE][Constants.THREE+nL]=-1.;    
 	    }
 	    else //For the deeper layers
 	    {
 	        Aeq[j][j+2]=-dt/d[j];
 	        Aeq[j][j+1]=dt/d[j];
-	        Aeq[j][2+nL+j]=-1;
+	        Aeq[j][2+nL+j]=-1.;
 	    }  
 	}
 
-	//TOTAL PRECIPITATION
-	double[] Ptotal=P+runon/A*1000; //(mm)
+	//TOTAL PRECIPITATION	
+//	double[] Ptotal=P+runon/A*1000; //(mm)
+	double[] Ptotal=GreenRoofCommon.add(GreenRoofCommon.multiply( (1.0/A*1000.), runon), P);
+	
 	//Ptotal includes rainfall plus runoff from upstream subarea
 	//Ptotal is uniformly distribuited
 
 
 	//INITIAL CONDITIONS
-	theta[Constants.ONE][:]=theta_i(:);                  //Initial soil water content (m3/m3)
+	for (int count=0;count<theta_i.length;count++)
+	{
+//		theta[Constants.ONE][:]=theta_i(:);                  //Initial soil water content (m3/m3)
+		theta[Constants.ONE][count]=theta_i[count];
+	}
+	
 	int i=tstep;
 
 	//IRRIGATION
 	double Ri=R[i]; 
-	irr_vol=irr_vol+Ri*A/1000; //Irrigation volume (m3)
+	irr_vol=irr_vol+Ri*A/1000.; //Irrigation volume (m3)
 	    
 	//INTERCEPTION (mm) 
 	    //Total precipitation minus interception
@@ -141,39 +150,48 @@ public class MassBalance
 	        
 	    //What are the new precipitation events?
 	        //time_events indicates the amount of dt from the beginning of the events
-	        [time_events]=p_events(Peffect(1:i),t_s,dt);
+//	        [time_events]=p_events(Peffect(1:i),t_s,dt);
+	        PEvents pev = new PEvents();
+	        int[] time_events=pev.p_events_(GreenRoofCommon.subsetArray(Peffect, 0, i),t_s,dt);
 	        //Interception
+	        double[] ET0_p;
+	        int[] time_events_p;
 	        if (i==Constants.ONE) //At the beginning
 	        {
-	            ET0_p=E_T[i];
-	            time_events_p=time_events[i];
+	            ET0_p=new double[]{E_T[i]};
+	            time_events_p=new int[]{time_events[i]};
 	            Ptot_cum_event=Peffect[i];
 	        }
 	        else
 	        {
-	            ET0_p=[E_T[i] E_T[i-1]];
-	            time_events_p=[time_events[i] time_events[i-1]];    
+	            ET0_p=new double[]{E_T[i], E_T[i-1]};
+	            time_events_p=new int[]{time_events[i],time_events[i-1]};    
 	        } 
+	        
 //	        [Peffect[i],Ptot_cum_event]=
-	        		Interception(Peffect[i],ET0_p,Ptot_cum_event,time_events_p,k,S*vegcov,dt);
+	        Interception interception = new Interception();
+	        TreeMap<String,Double> interceptionReturn = 
+	        		interception.Interception_(Peffect[i],ET0_p,Ptot_cum_event,time_events_p,k,S*vegcov,dt);
+	        Peffect[i]= interceptionReturn.get("Peffect");
+	        Ptot_cum_event= interceptionReturn.get("Ptot_cum_event");
 	           
 	       
 	//AVAILABLE WATER TO INFILTRATE (mm)
 	//If there is a reservoir, AWI includes the amount of water stored in the previous period
 	    AWI[i]=AWI[i]+Peffect[i];
 	    
-	   
+	 double Se,K,t;  
 	//PERCOLATION (mm/h) - For all layers    
 	    for (int j=Constants.ONE;j<nL;j++)
 	    {
 	        //van Genuchten parameters
 	        Se=(theta[i][j]-theta_r[j])/(theta_s[j]-theta_r[j]);     //Relative saturation(mm3/mm3)
-	        K=(Ks[j]*Se^L[j])*(1-(1-Se^(1/m[j]))^(m[j]))^2;         //Unsaturated hydraulic conductivity (mm/h)
-	        t=max((theta[i][j]-FC[j])*d[j]/K,0);                     //Travel time through the layer(h)                        
+	        K=(Ks[j]*Math.pow(Se,L[j]))* Math.pow((1.- Math.pow((1.-Math.pow(Se,(1./m[j]))),(m[j])) ),2);         //Unsaturated hydraulic conductivity (mm/h)
+	        t=Math.max((theta[i][j]-FC[j])*d[j]/K,0);                     //Travel time through the layer(h)                        
 	        //Percolation (mm/h)
 	        if (theta[i][j]>FC[j])
 	        {
-	            pe[i][j]=real((theta[i][j]-FC[j])*(1-exp(-dt/t))*d[j]/dt); //se multipica por d/dt para tener consistencia en las unidades
+	            pe[i][j]=((theta[i][j]-FC[j])*(1.-Math.exp(-dt/t))*d[j]/dt); //se multipica por d/dt para tener consistencia en las unidades
 	        }
 	        else
 	        {
@@ -181,10 +199,13 @@ public class MassBalance
 	        }
 	    }
 
+	    
+	    
 	//INFILTRATION (mm/h) - for the first layer
 	    //Updating new precipitation events
-	    [time_events]=p_events(AWI(1:i),t_s,dt);
-	    F00=0;
+	    time_events=pev.p_events_(GreenRoofCommon.subsetArray(AWI, 0, i),t_s,dt);
+	    double F00=0;
+	    double F0;
 	    //Initial flooding for Green Ampt calculation
 	    if (i==Constants.ONE)
 	    {
@@ -201,14 +222,17 @@ public class MassBalance
 	         F0=Ft[i-1];
 	    }
 	    //Suction head at wetting front (mm)
-	    psi=psi_b[Constants.ONE]*(((theta(i,1)-theta_r[Constants.ONE])/(theta_s[Constants.ONE]-theta_r[Constants.ONE]))^(-1/m[Constants.ONE])-1)^(1/n[Constants.ONE]);
+	    double psi=psi_b[Constants.ONE]*Math.pow((Math.pow(((theta[i][Constants.ONE]-theta_r[Constants.ONE])/(theta_s[Constants.ONE]-theta_r[Constants.ONE])),(-1./m[Constants.ONE]))-1.),(1./n[Constants.ONE]));
 	    //Infiltration (mm/h)
+	    GreenAmpt greenAmpt = new GreenAmpt();
 //	    [f[i],Ft[i]]=
-	    		Green_Ampt(F0,psi,Ks[Constants.ONE],dt,Se[Constants.ONE],theta_e,AWI[i]);
-
+	    TreeMap<String,Double> greenAmptReturnValues = greenAmpt.Green_Ampt_(F0,psi,Ks[GreenRoofCommon.ONE],dt,Se,theta_e,AWI[i]);
+	    f[i]=greenAmptReturnValues.get("f");
+	    Ft[i]=greenAmptReturnValues.get("Ft");
+	    		
 	    
 	//MASS BALANCE - For all layers
-	    limit_sup=0; //Auxiliary variable
+	    double limit_sup=0; //Auxiliary variable
 	    for (int j=Constants.ONE;j<nL;j++)
 	    {
 	        //Soil water content considering the above hydrological processes
@@ -224,8 +248,8 @@ public class MassBalance
 	        //the infiltration rate is decreased
 	        if (theta_p[Constants.ONE]>theta_s[Constants.ONE])
 	        {
-	            Ft[i]=Ft[i]-(f[i]-((theta_s[Constants.ONE]-theta(i,1))*d[Constants.ONE]/dt+E_T[i]+pe(i,1)))*dt;
-	            f[i]=((theta_s[Constants.ONE]-theta(i,1))*d[Constants.ONE]/dt+E_T[i]+pe(i,1));
+	            Ft[i]=Ft[i]-(f[i]-((theta_s[Constants.ONE]-theta[i][Constants.ONE])*d[Constants.ONE]/dt+E_T[i]+pe[i][Constants.ONE]))*dt;
+	            f[i]=((theta_s[Constants.ONE]-theta[i][Constants.ONE])*d[Constants.ONE]/dt+E_T[i]+pe[i][Constants.ONE]);
 	        }
 	        //Try again
 	        if (j==Constants.ONE) //First layer
@@ -246,13 +270,17 @@ public class MassBalance
 	    //If theta is maintained within the limits, its value is updated
 	    if (limit_sup==0 )
 	    {
-	        theta(i+1,:)=theta_p;
+//	        theta(i+1,:)=theta_p;
+	        for (int count = 0;count<theta_p.length;count++)
+	        {
+	        	theta[i+1][count]=theta_p[count];
+	        }
 	    }
 	    //If theta exceeds a limit, hydrological rates are adjusted as optimization problem     
 	    else
 	    {
 	        //Initial values
-	        x0=[f[i],E_T[i],pe(i,:),theta_p];   //x=[f E_T pe theta]
+	        x0=new double[]{f[i],E_T[i],pe(i,:),theta_p};   //x=[f E_T pe theta]
 	        //Limits
 	        li=[0,0,zeros(1,nL),theta_r*1.01]; //Lower limit
 	        ls=[f[i],E_T[i],pe(i,:),theta_s*0.99]; //Upper limit
@@ -458,8 +486,23 @@ public class MassBalance
 	        theta[i+1][j]=theta[i][j]+DthetaDt[i][j]*dt/d[j];
 	    }
 	    
-
-	return
+//	return items    theta,DthetaDt,f,pe,red,F,Ft,Peffect,AWI,esc,irr_vol,Ptot_cum_event
+	    TreeMap returnValues = new TreeMap();
+	    returnValues.put("theta", theta);
+	    returnValues.put("DthetaDt", DthetaDt);
+	    returnValues.put("f", f);
+	    returnValues.put("pe", pe);
+	    returnValues.put("red", red);
+	    returnValues.put("F", F);
+	    returnValues.put("Ft", Ft);
+	    returnValues.put("Peffect", Peffect);
+	    returnValues.put("AWI", AWI);
+	    returnValues.put("esc", esc);
+	    returnValues.put("irr_vol", irr_vol);
+	    returnValues.put("Ptot_cum_event", Ptot_cum_event);
+	
+	    
+	    return returnValues;
 
 		}
 }

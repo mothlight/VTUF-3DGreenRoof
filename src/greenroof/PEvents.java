@@ -6,7 +6,7 @@ public class PEvents
 //EVENTS DURATION
 //Efective precipitation events are separated by a certain number of hours
 
-	public int[] p_events(double[] Ptotal, int t_s, int dt)
+	public int[] p_events_(double[] Ptotal, int t_s, int dt)
 	{
 	
 		//INPUT

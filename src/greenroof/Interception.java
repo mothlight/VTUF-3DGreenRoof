@@ -1,11 +1,13 @@
 package greenroof;
 
+import java.util.TreeMap;
+
 public class Interception
 {
 	//INTERCEPTION FROM VEGETATION OR STORAGE SURFACE
 
-	public void Interception(double P,double ET0,double P_cum_event_bf,double time_events,double k,double S,double dt)
-
+	public TreeMap<String,Double> Interception_(double P,double[] ET0,double P_cum_event_bf,int[] time_events,double k,double S,double dt)
+	{
 	//INPUT
 	//P                              Precipitation(mm)
 	//ET0                            Evapotranspiration (mm/h)
@@ -26,6 +28,14 @@ public class Interception
 	//I_interval
 	//S_cum
 	//S_cum_bf
+	double Evap;
+	double[] Evap_cum_event=new double[2];
+	double S_interval;
+	double I_interval;
+	double S_cum;
+	double S_cum_bf;
+	double P_cum_event;
+	double Peffect;
 
 	//NOTE
 	//time_events*dt is the time (in hour) from the beginning of the event
@@ -33,28 +43,28 @@ public class Interception
 	//and (2) is the value at time (t-1)
 
 	    //Evaporation from the leaf surface or storage surface
-	    if (time_events(1)==1) //At the beginning of the event
+	    if (time_events[Constants.ONE]==1) //At the beginning of the event
 	    {
 	        //Cumulative evaporation until time t
-	        Evap_cum_event(1)=ET0(1)*time_events(1)*dt*k;
+	        Evap_cum_event[Constants.ONE]=ET0[Constants.ONE]*time_events[Constants.ONE]*dt*k;
 	        //Evaporation during the interval
-	        Evap=Evap_cum_event(1);      
+	        Evap=Evap_cum_event[Constants.ONE];      
 	    }
 	    else    //During the event
 	    {
 	        //Cumulative evaporation until time t
-	        Evap_cum_event(1)=ET0(1)*time_events(1)*dt*k;
+	        Evap_cum_event[Constants.ONE]=ET0[Constants.ONE]*time_events[Constants.ONE]*dt*k;
 	        //Cumulative evaporation until time t-1
-	        Evap_cum_event(2)=ET0(2)*time_events(2)*dt*k; 
+	        Evap_cum_event[Constants.TWO]=ET0[Constants.TWO]*time_events[Constants.TWO]*dt*k; 
 	        //Evaporation during the interval
-	        Evap=max(0,Evap_cum_event(1)-Evap_cum_event(2));
+	        Evap=Math.max(0,Evap_cum_event[Constants.ONE]-Evap_cum_event[Constants.TWO]);
 	    }
 
 	    //Cumulative precipitation
 	    if (P==0) //If the rain is null
 	    {
 	        //Some of the cumulative precipitation evaporates
-	        P_cum_event=max(P_cum_event_bf-Evap,0);
+	        P_cum_event=Math.max(P_cum_event_bf-Evap,0);
 	    }
 	    else //If it rains accumulated water increases
 	    {
@@ -80,7 +90,12 @@ public class Interception
 	    //Intercepted water is equal to storage water plus evaporated water during dt
 	    I_interval=Math.max(Evap+S_interval,0);
 	    //Effective precipitation is equal to precipitation minus intercepted water
-	    Peffect=Math.max(P-I_interval,0);   
+	    Peffect=Math.max(P-I_interval,0); 
+	    
+	    TreeMap<String,Double> returnValues = new TreeMap<String,Double>();
+	    returnValues.put("Peffect", Peffect);
+	    returnValues.put("Ptot_cum_event", P_cum_event);
+	    return returnValues;
 	    
  }
 }

@@ -1,6 +1,7 @@
 package greenroof;
 
 import java.util.ArrayList;
+import java.util.TreeMap;
 
 public class MainMix
 {
@@ -357,21 +358,21 @@ public class MainMix
 
 	//// INITIALISATION OF VARIABLES
 	//GF
-	double[][] runon=new double[P.length][1];               //Runoff volume entering to the subcatchment (m3)
-	double[][] runoff=new double[P.length][1];              //Runoff volume which drains from the subcatchment (m3)
+	double[] runon=new double[P.length];               //Runoff volume entering to the subcatchment (m3)
+	double[] runoff=new double[P.length];              //Runoff volume which drains from the subcatchment (m3)
 	double[][] Q_out=new double[(int)Math.round(Math.floor(P.length*1.1))][1];      //Outflow from the subcatchment to the street (m3/h) 
 
 	double[][] theta=new double[P.length][nL];              //Soil water content (m3/m3)
 	double[][] DthetaDt=new double[P.length][nL];           //Rate of change in soil water content (mm/h)
-	double[][] f=new double[P.length][1];                   //Infiltration (mm/h)
+	double[] f=new double[P.length];                   //Infiltration (mm/h)
 	double[][] pe=new double[P.length][nL];                 //Percolation (mm/h)
 
 	double[][] red=new double[P.length][nL];                //Redistribution (mm/h)
-	double[][] F=new double[P.length][1];                   //Cumulative infiltration (mm)
-	double[][] Ft=new double[P.length][1];                  //Cumulative infiltration to calculate Green Ampt (mm)
-	double[][] Peffect=new double[P.length][1];             //Precipitation plus runoff minus interception (mm)
-	double[][] AWI=new double[P.length][1];                 //Available water to infiltrate (mm)
-	double[][] esc=new double[P.length][1];                 //effective surface runoff (mm)
+	double[] F=new double[P.length];                   //Cumulative infiltration (mm)
+	double[] Ft=new double[P.length];                  //Cumulative infiltration to calculate Green Ampt (mm)
+	double[]Peffect=new double[P.length];             //Precipitation plus runoff minus interception (mm)
+	double[]AWI=new double[P.length];                 //Available water to infiltrate (mm)
+	double[]esc=new double[P.length];                 //effective surface runoff (mm)
 
 	//// INITIAL VALUES
 	//GF
@@ -426,7 +427,7 @@ public class MainMix
 //	        }
 	        
 	        // Advance
-	        model = model.moveForward(data_line);
+	        model.moveForward(data_line);
 	                        
 	        // GF : to be completed by GM
 	        result_ET[tstep] = model.et_mm_hour; // Evaporation + Transpiration in mm/hour
@@ -438,10 +439,26 @@ public class MainMix
 	        MassBalance massBalance = new MassBalance();
 //	        [theta,DthetaDt,f,pe,red,F,Ft,Peffect,AWI,esc,irr_vol,Ptot_cum_event]
 //	        returnData = 
-	        massBalance.MassBalance_(tstep,P,R,runon, result_ET,general_inf, outflow_data, sub_data,plant_data2,theta,DthetaDt,f,pe,red,F,Ft,Peffect, AWI, esc,irr_vol,Ptot_cum_event);
-	       
+	        TreeMap massBalanceReturn =
+	        		massBalance.MassBalance_(tstep,P,R,runon, result_ET,general_inf, outflow_data, sub_data,plant_data2,theta,DthetaDt,f,pe,red,F,Ft,Peffect, AWI, esc,irr_vol,Ptot_cum_event);
+	        theta=(double[][]) massBalanceReturn.get("theta");
+	        DthetaDt=(double[][]) massBalanceReturn.get("DthetaDt");
+		    f=(double[]) massBalanceReturn.get("f");
+		    pe=(double[][]) massBalanceReturn.get("pe");
+		    red=(double[][]) massBalanceReturn.get("red");
+		    F=(double[]) massBalanceReturn.get("F");
+		    Ft=(double[]) massBalanceReturn.get("Ft");
+		    Peffect=(double[]) massBalanceReturn.get("Peffect");
+		    AWI=(double[]) massBalanceReturn.get("AWI");
+		    esc=(double[]) massBalanceReturn.get("esc");
+		    irr_vol=(double) massBalanceReturn.get("irr_vol");
+		    Ptot_cum_event=(double) massBalanceReturn.get("Ptot_cum_event");
+	        
+	        
 	        // GF : to be modified by GM 
-	        model.VWC= theta(tstep,:);            
+	        model.VWC = GreenRoofCommon.get1DSliceOf2D(theta, 1, tstep);
+	        
+	       
 	        
 	        
 	        // Retrieve and store data
