@@ -1,5 +1,11 @@
 package greenroof;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import org.apache.commons.math3.linear.Array2DRowRealMatrix;
+import org.apache.commons.math3.linear.RealMatrix;
+
 public class GreenRoofCommon
 {
 	
@@ -7,12 +13,12 @@ public class GreenRoofCommon
 	public static final double twoDigitDelta = 1e2;
 	public static final double oneDigitDelta = 1e1;
 	
-	public static final int ONE = 0;
-	public static final int TWO = 1;
-	public static final int THREE = 2;
-	public static final int FOUR = 3;
-	public static final int FIVE = 4;
-	public static final int SIX = 5;
+//	public static final int ONE = 0;
+//	public static final int TWO = 1;
+//	public static final int THREE = 2;
+//	public static final int FOUR = 3;
+//	public static final int FIVE = 4;
+//	public static final int SIX = 5;
 
 	public static double[] fillArray(int length, double value)
 	{
@@ -101,6 +107,112 @@ public class GreenRoofCommon
 		for (int i=0;i<array.length;i++)
 		{
 			returnArray[i] = array[i] + array2[i];
+		}
+		
+		return returnArray;
+	}
+	
+	public static double[][] insertArray(double[][] array, double[][] array2, int xStart, int yStart)
+	{
+//		double[][] returnArray = new double[array.length][array[0].length];
+		int width = array2.length;
+		int height = array2[0].length;
+		
+		for (int i=0;i<width;i++)
+		{
+			for (int j=0;j<height;j++)
+			{
+				array[i+xStart][j+yStart] = array2[i][j];
+			}
+			
+		}	
+		return array;
+	}
+	
+	//this assumes m and n are equal
+	public static double[][] eye(int m, int n)
+	{
+		double[][] returnArray = new double[m][m];
+		
+		for (int i=0;i<m;i++)
+		{
+			returnArray[i][i]=1;
+		}
+		
+		return returnArray;
+	}
+	public static RealMatrix eyeMatrix(int m, int n)
+	{
+		double[][] returnArray = new double[m][m];
+		
+		for (int i=0;i<m;i++)
+		{
+			returnArray[i][i]=1;
+		}
+		
+//		return returnArray;
+		return new Array2DRowRealMatrix(returnArray);
+	}
+	
+	public static double[][] addArrays(double[][] array, double[][] array2)
+	{
+		double[][] returnArray = new double[array.length][array[0].length];
+		
+		for (int i=0;i<array.length;i++)
+		{
+			for (int j=0;j<array[0].length;j++)
+			{
+				returnArray[i][j] = array[i][j] + array2[i][j];
+			}
+			
+		}
+		
+		return returnArray;
+	}
+	
+	public static double[][] divideArray(double[][] array, double divide)
+	{
+		double[][] returnArray = new double[array.length][array[0].length];
+		
+		for (int i=0;i<array.length;i++)
+		{
+			for (int j=0;j<array[0].length;j++)
+			{
+				returnArray[i][j] = array[i][j] / divide;
+			}
+			
+		}
+		
+		return returnArray;
+	}
+	
+	public static double[][] divideArrays(double[][] array, double[][] divide)
+	{
+		double[][] returnArray = new double[array.length][array[0].length];
+		
+		for (int i=0;i<array.length;i++)
+		{
+			for (int j=0;j<array[0].length;j++)
+			{
+				returnArray[i][j] = divide[i][j]/array[i][j]  ;
+			}
+			
+		}
+		
+		return returnArray;
+	}
+	
+	public static double[][] multiplyArrays(double[][] array, double[][] divide)
+	{
+		double[][] returnArray = new double[array.length][array[0].length];
+		
+		for (int i=0;i<array.length;i++)
+		{
+			for (int j=0;j<array[0].length;j++)
+			{
+				returnArray[i][j] = array[i][j] * divide[i][j];
+			}
+			
 		}
 		
 		return returnArray;
@@ -275,6 +387,23 @@ public class GreenRoofCommon
 		return returnArray;
 	}
 	
+	public static double[][] subset2DArray(double[][] array, int x1, int x2, int y1, int y2)
+	{
+		int length = x2-x1+1;
+		int height = y2-y1+1;
+
+		double[][] returnArray = new double[length][height];
+		
+		for (int i=x1;i<=x2;i++)
+		{
+			for (int j=y1;j<=y2;j++)
+			{
+				returnArray[i-x1][j-y1] = array[i][j];
+			}
+		}
+		return returnArray;
+	}
+	
 	public static double[] nans(int length)
 	{
 		double[] returnArray = new double[length];
@@ -294,7 +423,18 @@ public class GreenRoofCommon
 		}
 		return returnArray;
 	}
-	
+	public static double[][] multiply(double[][] array, double otherTerm)
+	{
+		double[][] returnArray = new double[array.length][array[0].length];		
+		for (int i=0;i<array.length;i++)
+		{
+			for (int j=0;j<array[0].length;j++)
+			{
+				returnArray[i][j] = array[i][j] * otherTerm;
+			}			
+		}		
+		return returnArray;
+	}
 	public static double[] multiply(double[] array, double otherTerm)
 	{
 		double[] returnArray = new double[array.length];
@@ -522,4 +662,74 @@ public class GreenRoofCommon
 		}
 		return returnArray;
 	}
+	
+	public static double[] toArray(ArrayList<Double> arraylist)
+	{
+		double[] array = new double[arraylist.size()];
+		for (int i=0;i<arraylist.size();i++)
+		{
+			array[i]=arraylist.get(i);
+		}
+		return array;
+	}
+			
+	public static final double[] interpLinear(double[] x, double[] y, double[] xi) throws IllegalArgumentException 
+	{
+
+        if (x.length != y.length) 
+        {
+            throw new IllegalArgumentException("X and Y must be the same length");
+        }
+        if (x.length == 1) 
+        {
+            throw new IllegalArgumentException("X must contain more than one value");
+        }
+        double[] dx = new double[x.length - 1];
+        double[] dy = new double[x.length - 1];
+        double[] slope = new double[x.length - 1];
+        double[] intercept = new double[x.length - 1];
+
+        // Calculate the line equation (i.e. slope and intercept) between each point
+        for (int i = 0; i < x.length - 1; i++) 
+        {
+            dx[i] = x[i + 1] - x[i];
+            if (dx[i] == 0) 
+            {
+                throw new IllegalArgumentException("X must be montotonic. A duplicate " + "x-value was found");
+            }
+            if (dx[i] < 0) 
+            {
+                throw new IllegalArgumentException("X must be sorted");
+            }
+            dy[i] = y[i + 1] - y[i];
+            slope[i] = dy[i] / dx[i];
+            intercept[i] = y[i] - x[i] * slope[i];
+        }
+
+        // Perform the interpolation here
+        double[] yi = new double[xi.length];
+        for (int i = 0; i < xi.length; i++) 
+        {
+            if ((xi[i] > x[x.length - 1]) || (xi[i] < x[0])) 
+            {
+                yi[i] = Double.NaN;
+            }
+            else {
+                int loc = Arrays.binarySearch(x, xi[i]);
+                if (loc < -1) 
+                {
+                    loc = -loc - 2;
+                    yi[i] = slope[loc] * xi[i] + intercept[loc];
+                }
+                else 
+                {
+                    yi[i] = y[loc];
+                }
+            }
+        }
+
+        return yi;
+    }	
+			
+			
 }

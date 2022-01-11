@@ -1,7 +1,16 @@
 package greenroof;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.TreeMap;
+
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class MainMix
 {
@@ -22,13 +31,21 @@ public class MainMix
     double[] outflow_data ;
     double surface_sensor_depth = 0.01;
     
-	public void readData()
+    
+	public static void main(String[] args)
+	{
+		MainMix main = new MainMix();
+		main.run();
+
+	}
+    
+	public void run()
 	{
 		
 	    double SiteWindBLHeight;
 	    double SiteWindExp;    
 	// 
-
+	    String dataDir = "/home/kerryn/git/2021-11-VTUF-GreenRoof/Green roof model with IHMORS coupling/";
 
 	//%%             LLENAR ESTO             %%%
 	//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -40,6 +57,39 @@ public class MainMix
 
 	    
 	//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	    FileInputStream fis = null;
+	    try
+		{
+			fis = new FileInputStream(new File(dataDir + input_file));
+		}
+		catch (FileNotFoundException e)
+		{
+			e.printStackTrace();
+		}
+	    
+	    XSSFWorkbook wb = null;
+	    try
+		{
+			wb = new XSSFWorkbook(fis);
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+	    TreeMap<Integer,String> generalValues = new TreeMap<Integer,String>();
+	    XSSFSheet generalSheet = wb.getSheet("General");
+	    System.out.println(generalSheet.toString());
+	    for (int i=4-1;i<14;i++)
+	    {
+	    	 XSSFRow row = generalSheet.getRow(i);
+	    	 XSSFCell cell = row.getCell(10);//K
+	    	 String value = cell.getRawValue();
+//	    	 String value = cell.getStringCellValue();
+	    	 System.out.println(value);
+	    	 generalValues.put(i+1, value);
+	    }
+	   
+	   
 
 	//% PARSE GENERAL DATA
 
@@ -47,15 +97,15 @@ public class MainMix
 	//[numbers,files] = xlsread(input_file,'General','K4:K14');
 
 	// Parse Files
-//	out_file = files(1);
-//	if(files(2) ~= "")    
+//	out_file = files(1); //TODO
+//	if(files(2) ~= "")    //TODO
 //	    use_epw = true;    
 //	    epw_file = files(2);
 //	    disp("EPW file '" +epw_file+"' will be used");
 //	else
 //	    use_epw = false;
 //	end
-//	model_to_use = files(4);
+//	model_to_use = files(4);  //TODO
 //	location = files(7);
 //	clear files
 	    
@@ -71,17 +121,22 @@ public class MainMix
 //	Area = numbers(9);
 //	roof_height = numbers(10);
 	
-    meteo_dt= 5;
-    sim_dt = 1;
-    event_dt =6;
-    n_layers = 5;
-    max_steps = 3865;
+    meteo_dt = Integer.parseInt(generalValues.get(4));
+    sim_dt = Integer.parseInt(generalValues.get(5));
+    event_dt =Integer.parseInt(generalValues.get(6));
+    n_layers = Integer.parseInt(generalValues.get(7));
+    max_steps = Integer.parseInt(generalValues.get(10));
     
-    Area = 10;
-    roof_height = 3;
+    Area = Integer.parseInt(generalValues.get(12));
+    roof_height = Integer.parseInt(generalValues.get(13));
 
 	// These values correspond to OCEAN
+    String locationStrInt = generalValues.get(14);
     String location = "City";
+    if (locationStrInt.equals("137"))
+    {
+    	location = "City";
+    }
 
     
 	if (location.equals("Country"))
@@ -128,22 +183,60 @@ public class MainMix
 	//// PARSE OUTFLOW
 	//GF
 //	outflow_data=xlsread(input_file,'Outflow','K4:K11');
-	outflow_data = new double[]{0.01,
-			1,
-			1,
-			0.01,
-			0,
-			5.56E-03,
-			5.56E-03,
-			1
+//	outflow_data = new double[]{0.01,
+//			1,
+//			1,
+//			0.01,
+//			0,
+//			5.56E-03,
+//			5.56E-03,
+//			1
+//		};
+	
+	
+    TreeMap<Integer,Double> outflowValues = new TreeMap<Integer,Double>();
+    XSSFSheet outflowSheet = wb.getSheet("Outflow");
+    System.out.println(outflowSheet.toString());
+    for (int i=4-1;i<11;i++)
+    {
+    	 XSSFRow row = outflowSheet.getRow(i);
+    	 XSSFCell cell = row.getCell(10);//K
+    	 String value = cell.getRawValue();
+//    	 String value = cell.getStringCellValue();
+    	 System.out.println(value);
+    	 outflowValues.put(i+1, Double.parseDouble(value));
+    }
+    outflow_data = new double[]{outflowValues.get(4),
+    		outflowValues.get(5),
+    		outflowValues.get(6),
+    		outflowValues.get(7),
+    		outflowValues.get(8),
+    		outflowValues.get(9),
+    		outflowValues.get(10),
+    		outflowValues.get(11)
 		};
+    
 
-	//TODO don't use indoor for now
+
 	//// PARSE OUTDOOR 
 //	interior_temperature = xlsread(input_file,"TODO","A:A")+273.15;
+//    TreeMap<Integer,Double> interior_temperatureValues = new TreeMap<Integer,Double>();
+    double[] interior_temperature = new double[max_steps];
+    XSSFSheet interior_temperatureSheet = wb.getSheet("TODO");
+    System.out.println(interior_temperatureSheet.toString());
+    for (int i=0;i<max_steps;i++)
+    {
+    	 XSSFRow row = interior_temperatureSheet.getRow(i+1);
+    	 XSSFCell cell = row.getCell(0);//K
+    	 String value = cell.getRawValue();
+//    	 String value = cell.getStringCellValue();
+//    	 System.out.println(value);
+//    	 outflowValues.put(i+1, Double.parseDouble(value));
+    	 interior_temperature[i]=Double.parseDouble(value)+273.15;
+    }
 
 	
-	//TODO for now, just hard code a bit of data
+	//TODO not using EPW yet
 //	if(use_epw)
 //	{
 //	    // Load data from EPW
@@ -155,6 +248,26 @@ public class MainMix
 //	    // Load data from excel
 //	    weatherdata = xlsread(input_file,"Outdoors","F:K");
 //	}
+    
+    
+//    weatherdata = new double[max_steps][6];
+    weatherdata = new ArrayList<double[]>();
+    XSSFSheet outdoorsSheet = wb.getSheet("Outdoors");
+    System.out.println(outdoorsSheet.toString());
+    for (int i=0;i<max_steps;i++)
+    {
+    	 XSSFRow row = outdoorsSheet.getRow(i+5);
+    	 double[] weatherRow = new double[6];
+    	 for (int j=0;j<6;j++)
+    	 {
+    		 XSSFCell cell = row.getCell(j+5);//K
+        	 String value = cell.getRawValue();
+//        	 System.out.println(value);
+        	 weatherRow[j]=Double.parseDouble(value);
+    	 }
+    	 weatherdata.add(weatherRow);
+    }
+    
 	
 //	OUTDOORS INFORMATION										
 //	Year 	Month	Day	Hour	Minute	Precipitation	Solar radiation 	External temperature	External relative humidity	Wind speed at 2m	Irrigation
@@ -164,56 +277,68 @@ public class MainMix
 //	2017	12	16	0	5	0.0	-2.460	19.9	54.01	0.3	0
 //	2017	12	16	0	10	0.0	-2.412	19.9	54.01	0.2	0
 //	2017	12	16	0	15	0.0	-2.676	19.8	53.70	0.3	0
-	weatherdata = new ArrayList<double[]>();
-	weatherdata.add(new double[]{2017,	12,	16,	0,	0,	0.0,	-2.192,	19.6,	53.65,	0.1,	0});
-	weatherdata.add(new double[]{2017,	12,	16,	0,	5,	0.0,	-2.460,	19.9,	54.01,	0.3,	0});
-	weatherdata.add(new double[]{2017,	12,	16,	0,	10,	0.0,	-2.412,	19.9,	54.01,	0.2,	0});
-	weatherdata.add(new double[]{2017,	12,	16,	0,	15,	0.0,	-2.676,	19.8,	53.70,	0.3,	0});
-	}
-
-	public void run()
-	{
+//	weatherdata = new ArrayList<double[]>();
+//	weatherdata.add(new double[]{2017,	12,	16,	0,	0,	0.0,	-2.192,	19.6,	53.65,	0.1,	0});
+//	weatherdata.add(new double[]{2017,	12,	16,	0,	5,	0.0,	-2.460,	19.9,	54.01,	0.3,	0});
+//	weatherdata.add(new double[]{2017,	12,	16,	0,	10,	0.0,	-2.412,	19.9,	54.01,	0.2,	0});
+//	weatherdata.add(new double[]{2017,	12,	16,	0,	15,	0.0,	-2.676,	19.8,	53.70,	0.3,	0});
+//	}
+//
+//	public void run()
+//	{
 	//// CREATE PLANT
 	Plant plant = new Plant();
 
 //	plant_data = xlsread(input_file,'Plants','E5:E14');
-	double[] plant_data = new double[]{1,
-			1,
-			0.2,
-			0.9,
-			0.5,
-			0.1,
-			0.4,
-			0.4,
-			200,
-			0.001
-		};
-
-	plant.LAI=plant_data[Constants.ONE];        //leaf area index A FEB Tabares  
-	plant.rho=plant_data[Constants.THREE];     //sw reflectivity plant
-	plant.em=plant_data[Constants.FOUR];    //emissivity planta
-	plant.k=plant_data[Constants.FIVE];      // thermal conductivity planta
-	plant.height=plant_data[Constants.SIX];   //  height of plant [m]
-	plant.ks=plant_data[Constants.SEVEN]; // Extinsion coefficient   
-	plant.ks_ir = plant_data[Constants.EIGHT]; // IR extinsion coefficient
-	plant.rsmin=plant_data[Constants.NINE];      //[s/m] resistencia estomatica 
+//	double[] plant_data = new double[]{1,
+//			1,
+//			0.2,
+//			0.9,
+//			0.5,
+//			0.1,
+//			0.4,
+//			0.4,
+//			200,
+//			0.001
+//		};
+	double[] plant_data2 = new double[11];
+	XSSFSheet plantsSheet = wb.getSheet("Plants");
+//	System.out.println(plantsSheet.toString());
+	for (int i=0;i<11;i++)
+	{
+	   XSSFRow row = plantsSheet.getRow(i+3);
+	   XSSFCell cell = row.getCell(4);//E
+	   String value = cell.getRawValue();
+//	   System.out.println(value);
+	   plant_data2[i]=Double.parseDouble(value);
+	}
+	
+	
+	plant.LAI=plant_data2[5-4];        //leaf area index A FEB Tabares  
+	plant.rho=plant_data2[7-4];     //sw reflectivity plant
+	plant.em=plant_data2[8-4];    //emissivity planta
+	plant.k=plant_data2[9-4];      // thermal conductivity planta
+	plant.height=plant_data2[10-4];   //  height of plant [m]
+	plant.ks=plant_data2[11-4]; // Extinsion coefficient   
+	plant.ks_ir = plant_data2[12-4]; // IR extinsion coefficient
+	plant.rsmin=plant_data2[13-4];      //[s/m] resistencia estomatica 
 	plant.z=2;       // [m] height of wind measurements
-	plant.Zog = plant_data[Constants.TEN]; // VARIA SEGUN SMOOOTH
+	plant.Zog = plant_data2[14-4]; // VARIA SEGUN SMOOOTH
 //	clear plant_data
 
 	//GF
 //	plant_data2=xlsread(input_file,'Plants','E4:E14');
-	double[] plant_data2 = new double[]{100,1,
-			1,
-			0.2,
-			0.9,
-			0.5,
-			0.1,
-			0.4,
-			0.4,
-			200,
-			0.001
-		};
+//	double[] plant_data2 = new double[]{100,1,
+//			1,
+//			0.2,
+//			0.9,
+//			0.5,
+//			0.1,
+//			0.4,
+//			0.4,
+//			200,
+//			0.001
+//		};
 
 	//// CREATE SUBSTRATE
 	Substrate substrate = new Substrate();
@@ -234,6 +359,19 @@ public class MainMix
 			1400,
 			0.9
 		};
+	
+	
+//	double[] sub_data = new double[14];
+	XSSFSheet substrateSheet = wb.getSheet("Substrate");
+//	System.out.println(substrateSheet.toString());
+	for (int i=0;i<14;i++)
+	{
+	   XSSFRow row = substrateSheet.getRow(i+3);
+	   XSSFCell cell = row.getCell(4);//E
+	   String value = cell.getRawValue();
+//	   System.out.println(value);
+	   sub_data[i]=Double.parseDouble(value);
+	}
 
 	substrate.depth=sub_data[Constants.ONE];     // depth substrate  (ex t)
 	double initial_VWC = sub_data[Constants.TWO]; // This is used later.
@@ -263,6 +401,17 @@ public class MainMix
 			2400,
 			920
 			};
+	
+	XSSFSheet SupportSheet = wb.getSheet("Support");
+//	System.out.println(SupportSheet.toString());
+	for (int i=0;i<4;i++)
+	{
+	   XSSFRow row = SupportSheet.getRow(i+3);
+	   XSSFCell cell = row.getCell(4);//E
+	   String value = cell.getRawValue();
+//	   System.out.println(value);
+	   roof_data[i]=Double.parseDouble(value);
+	}
 
 	roof.depth = roof_data[Constants.ONE]; // meters
 	roof.k = roof_data[Constants.TWO]; //thermal conductivity
@@ -274,7 +423,7 @@ public class MainMix
 	String model_to_use = "Tabares";
 	//// CREATE MODEL
 	System.out.println("Using model "+model_to_use);
-	TabaresThermalMass model;
+	TabaresThermalMass model = null;
 	if (model_to_use.equals("Tabares"))
 	{
 	    model = new TabaresThermalMass(plant,substrate,roof,n_layers,n_layers,Area,sim_dt);
@@ -307,7 +456,7 @@ public class MainMix
 
 	//// INTERPOLATION FOR PRECIPITATION P AND IRRIGATION R
 	//GF
-	for (int i=Constants.ONE;i<weatherdata.size();i++)
+	for (int i=Constants.ONE;i<weatherdata.size()-1;i++)
 	{
 //	    if(use_epw)
 //	    {
@@ -317,8 +466,15 @@ public class MainMix
 //	    else
 //	    {
 		double[] weatherline = weatherdata.get(i);
-	    P(1+round((i-1)*Dt/dt):round(i*Dt/dt),1)=weatherline[Constants.ONE]*dt/Dt;
-	    R(1+round((i-1)*Dt/dt):round(i*Dt/dt),1)=weatherline[Constants.SIX]*dt/Dt;
+		int start = (int)(Constants.ONE+Math.round((i-Constants.ONE)*Dt/dt));
+		int end = (int)(Math.round((i+1)*Dt/dt)-1);
+		// this should go from 1-5 then 6-10 // TODO check starts with zero at first item
+		for (int weatherNumber=start;weatherNumber<weatherdata.size()-1;weatherNumber++)
+		{
+		    P[weatherNumber]=weatherline[Constants.ONE]*dt/Dt;
+		    R[weatherNumber]=weatherline[Constants.SIX]*dt/Dt;
+		}
+
 //	    }
 	}
 
@@ -387,7 +543,7 @@ public class MainMix
 //	}
 //	else    
 //	{
-	    sim_desc = "Performing simulation with inputs from "+input_file+" using "+model_to_use+" model and custom data";
+//	    sim_desc = "Performing simulation with inputs from "+input_file+" using "+model_to_use+" model and custom data";
 //	}
 //	h = waitbar(0,char(sim_desc));
 
@@ -401,15 +557,14 @@ public class MainMix
 	    for (int k=Constants.ONE;k<n_sub_tsteps;k++)
 	    {
 	        
-	        int tstep = (main_step-1)*n_sub_tsteps+k;
+	        int tstep = (main_step-Constants.ONE)*n_sub_tsteps+k;
 //	        waitbar( tstep/ (max_steps*n_sub_tsteps));
 	            
-	        //TODO getting rid of indoor for now
 	        // interpolate   
-//	        this_inner_t = interior_temperature(main_step);
-//	        next_inner_t = interior_temperature(main_step+1);
-//	        inner_T = this_inner_t + (k-1)*(next_inner_t - this_inner_t)/n_sub_tsteps;        
-//	        model.T_interior = inner_T;
+	        double this_inner_t = interior_temperature[main_step];
+	        double next_inner_t = interior_temperature[main_step+1];
+	        double inner_T = this_inner_t + (k-Constants.ONE)*(next_inner_t - this_inner_t)/n_sub_tsteps;        
+	        model.T_interior = inner_T;
 	        
 	        
 	                
@@ -501,67 +656,69 @@ public class MainMix
 	}
 //	close(h);
 
-
-	headers = [
-	    "Sky temperature (�C)",
-	    "Exterior temperature (�C)",
-	    "Wind speed (m/s)",
-	    "Global solar radiation (W/m2)",
-	    "Substrate Surface Temperature (�C)",
-	    "Temperature 5cm deep (�C)",
-	    "Temperature 10cm deep (�C)",
-	    "Temperature 15cm deep (�C)",
-	    "Foliage Temperature (�C)",
-	    "VWC surface",
-	    "VWC mid depth",
-	    "Substrate sensible heat transfer (W/m2)",
-	    "Foliage sensible heat transfer (W/m2)",
-	    "Foliage Transpiration (W/m2)",
-	    "Substrate evaporation (W/m2)",
-	    "Rainfall (mm)",
-	    "Interior temperature (�C)",
-	    "Heat flux below substrate (W/m2)",
-	    "Evapotranspiration (mm/hour)",
-	    "plant_absorbed_solar",
-	    "plant_absorbed_ir_sky",     
-	    "Qir",
-	    "substrate_solar_radiation",
-	    "substrate_infrared_radiation",
-	    "substrate_conduction",
+//
+	String headers = 
+	    "Sky temperature (�C)"+","+
+	    "Exterior temperature (�C)"+","+
+	    "Wind speed (m/s)"+","+
+	    "Global solar radiation (W/m2)"+","+
+	    "Substrate Surface Temperature (�C)"+","+
+	    "Temperature 5cm deep (�C)"+","+
+	    "Temperature 10cm deep (�C)"+","+
+	    "Temperature 15cm deep (�C)"+","+
+	    "Foliage Temperature (�C)"+","+
+	    "VWC surface"+","+
+	    "VWC mid depth"+","+
+	    "Substrate sensible heat transfer (W/m2)"+","+
+	    "Foliage sensible heat transfer (W/m2)"+","+
+	    "Foliage Transpiration (W/m2)"+","+
+	    "Substrate evaporation (W/m2)"+","+
+	    "Rainfall (mm)"+","+
+	    "Interior temperature (�C)"+","+
+	    "Heat flux below substrate (W/m2)"+","+
+	    "Evapotranspiration (mm/hour)"+","+
+	    "plant_absorbed_solar"+","+
+	    "plant_absorbed_ir_sky"+","+  
+	    "Qir"+","+
+	    "substrate_solar_radiation"+","+
+	    "substrate_infrared_radiation"+","+
+	    "substrate_conduction"+","+
 	    "heating_load (W/m2)"
-	    ];
-
-	results = [
-	    result_T_sky-273.15,
-	    result_T_out-273.15,
-	    result_wind_speed,
-	    result_Rsh,
-	    result_T_substrate-273.15,
-	    result_T_5cm-273.15,
-	    result_T_10cm-273.15,
-	    result_T_15cm-273.15,
-	    result_T_plants-273.15,
-	    result_VWC_surface,
-	    result_VWC_mid,
-	    result_substrate_convection, 
-	    result_plant_convection, 
-	    result_transpiration, 
-	    result_evaporation, 
-	    result_Rain, 
-	    result_T_interior-273.15,
-	    result_interface_heat_flux,
-	    result_ET,    
-	    result_plant_absorbed_solar,
-	    result_plant_absorbed_ir_sky,      
-	    result_Qir,
-	    result_substrate_solar_radiation,
-	    result_substrate_infrared_radiation,
-	    result_substrate_conduction,
-	    result_heating_load
-	];
-
-	xlswrite(char(out_file),[headers;results(1:n_sub_tsteps:end,:)],char(model_to_use));
-
+	    ;
+	System.out.println(headers);
+	for (int i=0;i<n_sub_tsteps;i++)
+	{	
+		String results = 
+		    (result_T_sky[i]-273.15)+","+
+		    (result_T_out[i]-273.15)+","+
+		    (result_wind_speed[i])+","+
+		    (result_Rsh[i])+","+
+		    (result_T_substrate[i]-273.15)+","+
+		    (result_T_5cm[i]-273.15)+","+
+		    (result_T_10cm[i]-273.15)+","+
+		    (result_T_15cm[i]-273.15)+","+
+		    (result_T_plants[i]-273.15)+","+
+		    (result_VWC_surface[i])+","+
+		    (result_VWC_mid[i])+","+
+		    (result_substrate_convection[i])+","+
+		    (result_plant_convection[i])+","+
+		    (result_transpiration[i])+","+
+		    (result_evaporation[i])+","+
+		    (result_Rain[i])+","+
+		    (result_T_interior[i]-273.15)+","+
+		    (result_interface_heat_flux[i])+","+
+		    (result_ET[i])+","+
+		    (result_plant_absorbed_solar[i])+","+
+		    (result_plant_absorbed_ir_sky[i])+","+  
+		    (result_Qir[i])+","+
+		    (result_substrate_solar_radiation[i])+","+
+		    (result_substrate_infrared_radiation[i])+","+
+		    (result_substrate_conduction[i])+","+
+		    (result_heating_load[i]);
+		System.out.println(results);
+	}
+//	xlswrite(char(out_file),[headers;results(1:n_sub_tsteps:end,:)],char(model_to_use));
+//
 	}
 
 

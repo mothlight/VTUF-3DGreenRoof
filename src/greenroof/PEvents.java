@@ -6,7 +6,7 @@ public class PEvents
 //EVENTS DURATION
 //Efective precipitation events are separated by a certain number of hours
 
-	public int[] p_events_(double[] Ptotal, int t_s, int dt)
+	public int[] p_events_(double[] Ptotal, int t_s, double dt)
 	{
 	
 		//INPUT
@@ -25,7 +25,7 @@ public class PEvents
 		
 		//When the time between two records of total precipitation is greater than
 		//t_s, then that events ends and another begins
-		int counter=t_s/dt;
+		int counter=(int)Math.round(t_s/dt);
 		for (int i=counter+1-1;i<Ptotal.length;i++)
 		{
 		    if (Ptotal[i]>0)

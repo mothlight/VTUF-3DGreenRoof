@@ -43,7 +43,7 @@ public class Interception
 	//and (2) is the value at time (t-1)
 
 	    //Evaporation from the leaf surface or storage surface
-	    if (time_events[Constants.ONE]==1) //At the beginning of the event
+	    if (time_events[Constants.ONE]==Constants.ONE) //At the beginning of the event
 	    {
 	        //Cumulative evaporation until time t
 	        Evap_cum_event[Constants.ONE]=ET0[Constants.ONE]*time_events[Constants.ONE]*dt*k;

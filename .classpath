@@ -4,6 +4,11 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/commons-math"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/POI-5.1.0"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/commons-math3"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/commons.math"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JML"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/java.math.numerical.library"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/POI"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

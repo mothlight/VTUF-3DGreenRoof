@@ -24,7 +24,7 @@ public class MassBalance
 
 
 	//Temporal information
-	int dt=general_inf[Constants.TWO]/60;                         //Modeling time interval (h)
+	double dt=general_inf[Constants.TWO]/60.;                         //Modeling time interval (h)
 	int t_s=general_inf[Constants.THREE];                        //Time interval between events (h)
 
 	//Parameters for estimating hydrological processes
@@ -180,7 +180,7 @@ public class MassBalance
 	//If there is a reservoir, AWI includes the amount of water stored in the previous period
 	    AWI[i]=AWI[i]+Peffect[i];
 	    
-	 double Se,K,t;  
+	 double Se=0,K,t;  
 	//PERCOLATION (mm/h) - For all layers    
 	    for (int j=Constants.ONE;j<nL;j++)
 	    {
@@ -226,7 +226,7 @@ public class MassBalance
 	    //Infiltration (mm/h)
 	    GreenAmpt greenAmpt = new GreenAmpt();
 //	    [f[i],Ft[i]]=
-	    TreeMap<String,Double> greenAmptReturnValues = greenAmpt.Green_Ampt_(F0,psi,Ks[GreenRoofCommon.ONE],dt,Se,theta_e,AWI[i]);
+	    TreeMap<String,Double> greenAmptReturnValues = greenAmpt.Green_Ampt_(F0,psi,Ks[Constants.ONE],dt,Se,theta_e,AWI[i]);
 	    f[i]=greenAmptReturnValues.get("f");
 	    Ft[i]=greenAmptReturnValues.get("Ft");
 	    		
@@ -277,45 +277,49 @@ public class MassBalance
 	        }
 	    }
 	    //If theta exceeds a limit, hydrological rates are adjusted as optimization problem     
-	    else
-	    {
-	        //Initial values
-	        x0=new double[]{f[i],E_T[i],pe(i,:),theta_p};   //x=[f E_T pe theta]
-	        //Limits
-	        li=[0,0,zeros(1,nL),theta_r*1.01]; //Lower limit
-	        ls=[f[i],E_T[i],pe(i,:),theta_s*0.99]; //Upper limit
-	        options=optimset('Algorithm','active-set');
-	        //The problem is solved by maximizing the sum of rates f+E_T+pe
-	        [x]=fmincon(@(x)(-sum(x(1:2+nL))),x0,[],[],Aeq,-theta(i,:),li,ls,[],options);
-	        //Rates are updated
-	        //If theta exceeds theta_s, the infiltration rate must be reduced
-	        if (x[Constants.ONE]<f[i])
-	        {
-	            Ft[i]=Ft[i]-(f[i]-x[Constants.ONE])*dt;
-	            f[i]=x[Constants.ONE];
-	        }
-	        //If theta is less than theta_r, the evapotranspiration or
-	        //percolation rate must be reduced
-	        //E_T[i]=x(2);
-	        pe(i,:)=x(3:2+nL);
-	        //The rate of change of soil water content is updated
-	        for (int j=Constants.ONE;j<nL;j++)
-	        {
-	            if (j==Constants.ONE) //First layer
-	            {
-	                theta[i+1][j]=theta[i][j]+(f[i]-E_T[i]-pe[i][j])*dt/d[j];
-	            }
-	            else //Deeper layers
-	            {
-	                theta[i+1][j]=theta[i][j]+(pe[i][j-1]-pe[i][j])*dt/d[j];
-	            }
-	        }
-	    }
+	    //TODO not sure this gets called
+//	    else
+//	    {
+//	    	//TODO fix this whole section
+//	    	
+//	        //Initial values
+//	        x0=new double[]{f[i],E_T[i],pe(i,:),theta_p};   //x=[f E_T pe theta]
+//	        //Limits
+//	        li=[0,0,zeros(1,nL),theta_r*1.01]; //Lower limit
+//	        ls=[f[i],E_T[i],pe(i,:),theta_s*0.99]; //Upper limit
+//	        options=optimset('Algorithm','active-set');
+//	        //The problem is solved by maximizing the sum of rates f+E_T+pe
+//	        [x]=fmincon(@(x)(-sum(x(1:2+nL))),x0,[],[],Aeq,-theta(i,:),li,ls,[],options);
+//	        //Rates are updated
+//	        //If theta exceeds theta_s, the infiltration rate must be reduced
+//	        if (x[Constants.ONE]<f[i])
+//	        {
+//	            Ft[i]=Ft[i]-(f[i]-x[Constants.ONE])*dt;
+//	            f[i]=x[Constants.ONE];
+//	        }
+//	        //If theta is less than theta_r, the evapotranspiration or
+//	        //percolation rate must be reduced
+//	        //E_T[i]=x(2);
+//	        pe(i,:)=x(3:2+nL);
+//	        //The rate of change of soil water content is updated
+//	        for (int j=Constants.ONE;j<nL;j++)
+//	        {
+//	            if (j==Constants.ONE) //First layer
+//	            {
+//	                theta[i+1][j]=theta[i][j]+(f[i]-E_T[i]-pe[i][j])*dt/d[j];
+//	            }
+//	            else //Deeper layers
+//	            {
+//	                theta[i+1][j]=theta[i][j]+(pe[i][j-1]-pe[i][j])*dt/d[j];
+//	            }
+//	        }
+//	    }
 	    
 	    
 	//CUMULATIVE INFILTRATION (mm) - For the first layer
 	//Infiltration depth during the time step dt. It value is calculated based on
 	//cumulative infiltration for each precipitation events
+	    double dF;
 	    if (i==Constants.ONE)
 	    {
 	        dF=Ft[i]-F00;
@@ -331,7 +335,7 @@ public class MassBalance
 	    //Cumulative infiltration considering the complete simulation
 	    if (i!=Constants.ONE)
 	    {
-	        F[i]=real(F[i-1]+dF);
+	        F[i]=(F[i-1]+dF);
 	    }
 	    else
 	    {
@@ -342,6 +346,7 @@ public class MassBalance
 	//SURFACE RUNOFF (mm) - For the first layer
 	    //Infiltration depth during the time step dt. It value is calculated based on
 	    //cumulative infiltration considering the complete simulation
+	    double Fp;
 	    if (i==Constants.ONE) //At the beginning of the simulation
 	    {
 	        Fp=F[i];
@@ -352,7 +357,7 @@ public class MassBalance
 	    }
 	    //The rainfall excess (mm) is calculated in each time as the difference
 	    //between AWI and the infiltration depth
-	    e[i]=max(AWI[i]-Fp,0);
+	    e[i]=Math.max(AWI[i]-Fp,0);
 	    //If the subarea no considers a surface storage, the runoff is
 	    //equal to rainfall excess
 	    if (D==0)
@@ -380,14 +385,15 @@ public class MassBalance
 	    //subarea is composed of more than one layer
 	    if (f[i]<1e-12 && nL>1)
 	    {
-	        rr=ones(1,nL-1); //Redistribution factor
+//	        rr=ones(1,nL-1); //Redistribution factor
+	        double[] rr = GreenRoofCommon.fillArray(nL-1, 1);
 	        for (int j=Constants.ONE;j<nL;j++)
 	        {
 	            //van Genuchten parameters considering the theta values after
 	            //considering the above hydrological processes
-	            Se=(theta[i+1][j]-theta_r[j])/(theta_s[j]-theta_r[j]);
-	            psi_p[j]=real(psi_b[j]*(Se^(-m[j]^(-1))-1)^(n[j]^(-1)));
-	            K_p[j]=real(Ks[j]*Se^L[j]*(1-(1-Se^(n[j]/(n[j]-1)))^((n[j]-1)/n[j]))^2);
+	            Se=(theta[i+1][j]-theta_r[j])/(theta_s[j]-theta_r[j]);	            
+	            psi_p[j]=(psi_b[j]*Math.pow((Math.pow(Se,(Math.pow(-m[j],(-1))))-1),(Math.pow(n[j],(-1)))));	            
+	            K_p[j]=(Ks[j]*Math.pow(Se,L[j])*Math.pow((1-Math.pow((1-Math.pow(Se,(n[j]/(n[j]-1)))),((n[j]-1)/n[j]))),2));
 	        }
 	        for (int j=Constants.TWO;j<nL-1;j++)
 	        {
@@ -396,8 +402,8 @@ public class MassBalance
 	            //flow obtained is split according to a factor 'rr'
 	            if (psi_p[j-1]>psi_p[j] && psi_p[j+1]>psi_p[j])
 	            {
-	                rr[j-1]=abs(psi_p[j]-psi_p[j-1])/(abs(psi_p[j]-psi_p[j-1])+abs(psi_p[j]-psi_p[j+1]));
-	                rr[j]=abs(psi_p[j]-psi_p[j+1])/(abs(psi_p[j]-psi_p[j-1])+abs(psi_p[j]-psi_p[j+1]));
+	                rr[j-1]=Math.abs(psi_p[j]-psi_p[j-1])/(Math.abs(psi_p[j]-psi_p[j-1])+Math.abs(psi_p[j]-psi_p[j+1]));
+	                rr[j]=Math.abs(psi_p[j]-psi_p[j+1])/(Math.abs(psi_p[j]-psi_p[j-1])+Math.abs(psi_p[j]-psi_p[j+1]));
 	            }
 	        }
 	        for (int j=Constants.ONE;j<nL-1;j++)
@@ -435,41 +441,42 @@ public class MassBalance
 	        }
 	        //If theta exceeds a limit, redistribution rate is adjusted as
 	        //optimization problem  
-	        if (limit_sup==1  )
-	        {
-	            dir_red=sign(red(i,1:nL-1)); //Redistribution flow orientation
-	            //Matrix Aer
-	            Aer=zeros(nL,2*nL-1);
-	            for (int j=Constants.ONE;j<nL;j++)
-	            {
-	                if (j==Constants.ONE) //For the first layer
-	                {
-	                    Aer[j][j]=1;
-	                    Aer[j][nL+j]=-dir_red[j]*dt/d[j]; 
-	                }
-	                else if (j>Constants.ONE && j<nL) //For the middle layers
-	                {
-	                    Aer[j][j]=1;
-	                    Aer[j][nL+j-1]=dir_red[j-1]*dt/d[j];
-	                    Aer[j][nL+j]=-dir_red[j]*dt/d[j];
-	                }
-	                else //For the last layer
-	                {
-	                    Aer[j][j]=1;
-	                    Aer[j][nL+j-1]=dir_red[j-1]*dt/d[j];
-	                }
-	            }
-	            //Initial values
-	            y0=[theta_p,abs(red(i,1:nL-1))];   //y=[theta(nL) red(nL-1)]
-	            //Limits
-	            li=[theta_r*1.01,zeros(1,nL-1)]; //Lower limit
-	            ls=[theta_s*0.99,abs(red(i,1:nL-1))]; //Upper limit
-	            options=optimset('Algorithm','active-set');
-	            //The problem is solved by maximizing the sum of rates red
-	            [y]=fmincon(@(y)(-sum(y(nL+1:end).*(1-dir_red)/2)),y0,[],[],Aer,theta(i+1,:),li,ls,[],options);
-	            //Rates are updated
-	            red(i,1:nL-1)=dir_red.*y(nL+1:end);               
-	        }    
+	        //TODO, not sure if this is called
+//	        if (limit_sup==1  )
+//	        {
+//	            dir_red=sign(red(i,1:nL-1)); //Redistribution flow orientation
+//	            //Matrix Aer
+//	            Aer=zeros(nL,2*nL-1);
+//	            for (int j=Constants.ONE;j<nL;j++)
+//	            {
+//	                if (j==Constants.ONE) //For the first layer
+//	                {
+//	                    Aer[j][j]=1;
+//	                    Aer[j][nL+j]=-dir_red[j]*dt/d[j]; 
+//	                }
+//	                else if (j>Constants.ONE && j<nL) //For the middle layers
+//	                {
+//	                    Aer[j][j]=1;
+//	                    Aer[j][nL+j-1]=dir_red[j-1]*dt/d[j];
+//	                    Aer[j][nL+j]=-dir_red[j]*dt/d[j];
+//	                }
+//	                else //For the last layer
+//	                {
+//	                    Aer[j][j]=1;
+//	                    Aer[j][nL+j-1]=dir_red[j-1]*dt/d[j];
+//	                }
+//	            }
+//	            //Initial values
+//	            y0=[theta_p,abs(red(i,1:nL-1))];   //y=[theta(nL) red(nL-1)]
+//	            //Limits
+//	            li=[theta_r*1.01,zeros(1,nL-1)]; //Lower limit
+//	            ls=[theta_s*0.99,abs(red(i,1:nL-1))]; //Upper limit
+//	            options=optimset('Algorithm','active-set');
+//	            //The problem is solved by maximizing the sum of rates red
+//	            [y]=fmincon(@(y)(-sum(y(nL+1:end).*(1-dir_red)/2)),y0,[],[],Aer,theta(i+1,:),li,ls,[],options);
+//	            //Rates are updated
+//	            red(i,1:nL-1)=dir_red.*y(nL+1:end);               
+//	        }    
 	    }
 	  
 	//RATE OF CHANGE OF SOIL WATER CONTENT
@@ -477,7 +484,7 @@ public class MassBalance
 	    {
 	        if (j==Constants.ONE)
 	        {
-	            DthetaDt[i][j]=f[i]-E_T[i]-pe[i][j]+red(i,1);
+	            DthetaDt[i][j]=f[i]-E_T[i]-pe[i][j]+red[i][Constants.ONE];
 	        }
 	        else
 	        {
@@ -505,4 +512,5 @@ public class MassBalance
 	    return returnValues;
 
 		}
+		
 }
